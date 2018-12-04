@@ -1,0 +1,27 @@
+SAMPLES, = glob_wildcards("../data/fastq/{sample}_1.fastq.gz")
+
+REF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.fna"
+GFF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.gff"
+
+THREADS = 20
+PICARD = "/home/warnerm/local_install/picard.jar"
+
+rule all:
+	input: expand("../temp/alignments/{sample}.bam",sample=SAMPLES)
+
+rule buildBowtie:
+	input: REF
+	output: "../ref/Mphar.1.bt2"
+	shell: "bowtie2-build {REF} ../ref/Amel"
+
+rule alignReads:
+	input: "../ref/Mphar.1.bt2",samp="../data/fastq/{sample}_1.fastq"
+	output: "../temp/alignments/{sample}_noRG.bam"
+	shell: """gunzip {input[samp]}; bowtie2 -x ../ref/Mphar -U {input[samp]} -p {THREADS} | samtools view -bSF4 > {output}"""
+
+#Sorts the bam files and adds a read group
+rule PicardGroups:
+	input: "../temp/alignments/{sample}_noRG.bam"
+	output: "../temp/alignments/{sample}.bam"
+	shell: """java -jar {PICARD} AddOrReplaceReadGroups I={input} O={output} SORT_ORDER=coordinate \
+				CREATE_INDEX=true RGPL=illumina RGID=11 RGSM={wildcards.sample} RGLB=lib1 RGPU=unit1"""
