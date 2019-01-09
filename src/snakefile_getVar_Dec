@@ -11,7 +11,7 @@ Baysic v1.0
 bedtools v2.26.0
 '''
 BAM_DIR="../temp/alignments"
-SAMPLES, = glob_wildcards("{BAM_DIR}/{sample}.bam")
+SAMPLES, = glob_wildcards(BAM_DIR+"/{sample}.bam")
 PICARD = "/home/warnerm/local_install/picard.jar"
 
 REF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.fna"
@@ -21,10 +21,11 @@ PLATYPUS = "/home/warnerm/local_install/Platypus_0.8.1/Platypus.py"
 CALLER=["freebayes","samtools","GATK"]
 STAGE = ["larva","pupa","head","thorax","abdomen"]
 SPECIES = "Mphar"
+NLINE = 193779
 
 
 rule all:
-	input: expand("../ref/{SPECIES}.subEx_{i}.bed",i=range(20))
+	input: "../var/"+SPECIES+".freebayes.vcf"
 
 rule makeBED:
 	input: GFF
@@ -37,20 +38,20 @@ rule makeDict:
 	shell: "java -jar {PICARD} CreateSequenceDictionary R={input} O={output}"
 
 #Sorts the bam files; necessary for at least samtools
-#rule PicardGroups:
-#	input: "{BAM_DIR}/{sample}.bam"
-#	output: "../temp/alignments/africa_cerana/rg_added/{sample}.bam"
-#	shell: """java -jar {PICARD} AddOrReplaceReadGroups I={input} O={output} SORT_ORDER=coordinate \
-#				CREATE_INDEX=true RGPL=illumina RGID={wildcards.sampled} RGSM={wildcards.sample} RGLB=lib1 RGPU=unit1"""
+rule PicardGroups:
+	input: BAM_DIR+"/{sample}.bam"
+	output: "../temp/aln_read/{sample}.bam"
+	shell: """java -jar {PICARD} AddOrReplaceReadGroups I={input} O={output} SORT_ORDER=coordinate \
+				CREATE_INDEX=true RGPL=illumina RGID={wildcards.sample} RGSM={wildcards.sample} RGLB=lib1 RGPU=unit1"""
 
 
 #Split up targets to run freebayes and gatk in parallel
 rule subset_exons:
 	input: "../ref/{SPECIES}.exons.bed"
-	output: expand("../ref/{SPECIES}.subEx_{i}.bed",i=range(20))
+	output: expand("../ref/{{SPECIES}}.subEx_{i}.bed",i=range(20))
 	run:
-		total = shell("wc -l {input}")
-		inc = ceiling(total/20)
+		total = int(NLINE)
+		inc = int(total/20)+1
 		for i in range(20):
 			if i == 19:
 				numL = total
@@ -59,21 +60,21 @@ rule subset_exons:
 				numL = inc*(i+1)
 				t = inc
 			f = output[i]
-			shell("head -n {numL} {input} | tail -n inc > {f}")
+			shell("head -n {numL} {input} | tail -n {inc} > {f}")
 
 #'-=' means report genome qualities, the params makes a list of input files, min-alternate-count sets minimum number of chromosomes sampled to consider an allele
 #Using target= exons.bed because we only want to call variants for exons
-#rule freeBayes:
-#	input: expand("../temp/alignments/africa_cerana/rg_added/{sample}.bam",sample=SAMPLES),bed="../ref/subEx_{i}.bed"
-#	output: "../var/fb_{i}.vcf"
-#	params: 
-#		files = "-b " + " -b ".join(expand("../temp/alignments/africa_cerana/rg_added/{sample}.bam",sample=SAMPLES)),
-#	shell: "freebayes -= {params.files} -v {output} -f {REF} --min-alternate-count 4 --use-best-n-alleles 3 --targets {input[bed]}"
+rule freeBayes:
+	input: expand("../temp/aln_read/{sample}.bam",sample=SAMPLES),bed="../ref/"+SPECIES+".subEx_{i}.bed"
+	output: "../var/"+SPECIES+".fb_{i}.vcf"
+	params: 
+		files = "-b " + " -b ".join(expand("../temp/aln_read/{sample}.bam",sample=SAMPLES)),
+	shell: "freebayes -= {params.files} -v {output} -f {REF} --min-alternate-count 4 --use-best-n-alleles 3 --targets {input[bed]}"
 
-#rule mergeFB:
-#	input: expand("../var/fb_{i}.vcf",i=range(20))
-#	output: "../var/freebayes.vcf"
-#	shell: "vcf-concat {input} > {output}"
+rule mergeFB:
+	input: expand("../var/"+SPECIES+".fb_{i}.vcf",i=range(20))
+	output: "../var/"+SPECIES+".freebayes.vcf"
+	shell: "vcf-concat {input} > {output}"
 
 #Just get first three columns of bed files
 #rule editBed:
