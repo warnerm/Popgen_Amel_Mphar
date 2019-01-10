@@ -14,7 +14,8 @@ BAM_DIR="../temp/alignments"
 SAMPLES, = glob_wildcards(BAM_DIR+"/{sample}.bam")
 PICARD = "/home/warnerm/local_install/picard.jar"
 
-REF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.fna"
+REF_PREFIX = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic"
+REF = REF_PREFIX+".fna"
 GFF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.gff"
 THREADS = 20
 PLATYPUS = "/home/warnerm/local_install/Platypus_0.8.1/Platypus.py"
@@ -25,7 +26,7 @@ NLINE = 193779
 
 
 rule all:
-	input: "../var/"+SPECIES+".freebayes.vcf"
+	input: "../var/"+SPECIES+".consensus.vcf.pos"
 
 rule makeBED:
 	input: GFF
@@ -34,7 +35,7 @@ rule makeBED:
 
 rule makeDict:
 	input: REF
-	output: "{REF}.dict"
+	output: REF_PREFIX+".dict"
 	shell: "java -jar {PICARD} CreateSequenceDictionary R={input} O={output}"
 
 #Sorts the bam files; necessary for at least samtools
@@ -77,65 +78,64 @@ rule mergeFB:
 	shell: "vcf-concat {input} > {output}"
 
 #Just get first three columns of bed files
-#rule editBed:
-#	input: "../ref/subEx_{i}.bed"
-#	output: "../ref/subEx_{i}_edit.bed"
-#	shell: """cat {input} | awk '{{print$1"\t"$2"\t"$3}}' > {output}"""
+rule editBed:
+	input: "../ref/"+SPECIES+".subEx_{i}.bed"
+	output: "../ref/"+SPECIES+".subEx_{i}_edit.bed"
+	shell: """cat {input} | awk '{{print$1"\t"$2"\t"$3}}' > {output}"""
 
 #Convert bed files to interval lists for gatk
-#rule intervalList:
-#	input: "../ref/subEx_{i}_edit.bed"
-#	output: "../ref/subEx_{i}.interval_list"
-#	shell: """export PATH=~/local_install/jdk1.8.0_05/bin:$PATH; java -jar {PICARD} BedToIntervalList I={input} O={output} SD=../ref/GCF_000002195.4_Amel_4.5_genomic.dict"""
+rule intervalList:
+	input: bed="../ref/"+SPECIES+".subEx_{i}_edit.bed"
+	output: "../ref/"+SPECIES+".subEx_{i}.interval_list"
+	shell: """export PATH=~/local_install/jdk1.8.0_05/bin:$PATH; java -jar {PICARD} BedToIntervalList I={input[bed]} O={output} SD={input[dict]}"""
 
-#rule GATK:
-#	input: expand("../temp/alignments/africa_cerana/rg_added/{sample}.bam",sample=SAMPLES),intervals= "../ref/subEx_{i}.interval_list"
-#	output: "../var/gatk_{i}.vcf"
-#	params: files = "-I " + " -I ".join(expand("../temp/alignments/africa_cerana/rg_added/{sample}.bam",sample=SAMPLES))
-#	shell: """export PATH=~/local_install/jdk1.8.0_05/bin:$PATH; gatk --java-options "-Xmx30g" HaplotypeCaller \
-#				-R {REF} \
-#				{params.files} \
-#				-O {output} \
-#				-L {input[intervals]} \
-#				--heterozygosity 0.002 \
-#				--mbq 20 \
-#				--max-alternate-alleles 4"""
+rule GATK:
+	input: expand("../temp/aln_read/{sample}.bam",sample=SAMPLES),intervals= "../ref/"+SPECIES+".subEx_{i}.interval_list",dict=rules.makeDict.output
+	output: "../var/"+SPECIES+".gatk_{i}.vcf"
+	params: files = "-I " + " -I ".join(expand("../temp/aln_read/{sample}.bam",sample=SAMPLES))
+	shell: """export PATH=~/local_install/jdk1.8.0_05/bin:$PATH; gatk --java-options "-Xmx30g" HaplotypeCaller \
+				-R {REF} \
+				{params.files} \
+				-O {output} \
+				-L {input[intervals]} \
+				--heterozygosity 0.002 \
+				--mbq 20 \
+				--max-alternate-alleles 4"""
 
+rule mergeGATK:
+	input: expand("../var/"+SPECIES+".gatk_{i}.vcf",i=range(20))
+	output: "../var/"+SPECIES+".GATK.vcf"
+	shell: "vcf-concat {input} > {output}"
 
-#rule mergeGATK:
-#	input: expand("../var/gatk_{i}.vcf",i=range(20))
-#	output: "../var/GATK.vcf"
-#	shell: "vcf-concat {input} > {output}"
-
-#rule samtools:
-#	input: BAMs = expand("../temp/alignments/africa_cerana/rg_added/{sample}.bam",sample=SAMPLES),bed = "../ref/exons.bed"
-#	output: "../var/samtools.vcf"
-#	shell: "samtools mpileup -l {input[bed]} -ugf {REF} {input[BAMs]} | bcftools call -vc - | vcfutils.pl varFilter -D 500 > {output}"
+rule samtools:
+	input: BAMs = expand("../temp/aln_read/{sample}.bam",sample=SAMPLES),bed = "../ref/"+SPECIES+".exons.bed"
+	output: "../var/"+SPECIES+".samtools.vcf"
+	shell: "samtools mpileup -l {input[bed]} -ugf {REF} {input[BAMs]} | bcftools call -vc - | vcfutils.pl varFilter -D 500 > {output}"
 
 
 #remove insertions and deletions
-#rule rmIndel:
-#	input: "../var/{VCFcaller}.vcf"
-#	output: "../var/{VCFcaller}.snp.recode.vcf"
-#	shell: "vcftools --vcf {input} --remove-indels --out ../var/{wildcards.VCFcaller}.snp --recode --recode-INFO-all"
+rule rmIndel:
+	input: "../var/"+SPECIES+".{VCFcaller}.vcf"
+	output: "../var/"+SPECIES+".{VCFcaller}.snp.recode.vcf"
+	shell: "vcftools --vcf {input} --remove-indels --out ../var/{SPECIES}.{wildcards.VCFcaller}.snp --recode --recode-INFO-all"
 
-#rule allelicPrimitives:
-#	input: "../var/{VCFcaller}.snp.recode.vcf"
-#	output: "../var/{VCFcaller}.snp.primatives.vcf"
-#	shell: "cat {input} | vcfallelicprimitives -kg > {output}"
+rule allelicPrimitives:
+	input: "../var/"+SPECIES+".{VCFcaller}.snp.recode.vcf"
+	output: "../var/"+SPECIES+".{VCFcaller}.snp.primatives.vcf"
+	shell: "cat {input} | vcfallelicprimitives -kg > {output}"
 
-#rule vcfSort:
-#	input: "../var/{VCFcaller}.snp.primatives.vcf"
-#	output: "../var/{VCFcaller}.snp.primatives.sorted.vcf"
-#	shell: "vcf-sort {input} > {output}"
+rule vcfSort:
+	input: "../var/"+SPECIES+".{VCFcaller}.snp.primatives.vcf"
+	output: "../var/"+SPECIES+".{VCFcaller}.snp.primatives.sorted.vcf"
+	shell: "vcf-sort {input} > {output}"
 
 # generate consensus SNP calls
-#rule BAYSIC: 	
-#	input: expand("../var/{VCFcaller}.snp.primatives.sorted.vcf", VCFcaller=CALLER)
-#	output: "../var/consensus.vcf.pos","../var/consensus.vcf"
-#	run: 
-#		infiles = "".join([" --vcf " + i for i in input])
-#		shell("perl baysic.pl --statsOutFile ../var/combined.stats --pvalCutoff 0.8 {} --countsOutFile ../var/combined.cts --vcfOutFile ../var/consensus.vcf".format(infiles))
+rule BAYSIC: 	
+	input: expand("../var/"+SPECIES+".{VCFcaller}.snp.primatives.sorted.vcf", VCFcaller=CALLER)
+	output: "../var/"+SPECIES+".consensus.vcf.pos","../var/"+SPECIES+".consensus.vcf"
+	run: 
+		infiles = "".join([" --vcf " + i for i in input])
+		shell("perl baysic.pl --statsOutFile ../var/combined.stats --pvalCutoff 0.8 {} --countsOutFile ../var/combined.cts --vcfOutFile ../var/consensus.vcf".format(infiles))
 
 # select bi-allelic consensus sites
 #rule consensusFilter:
