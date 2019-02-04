@@ -10,24 +10,38 @@ vcftools
 Baysic v1.0
 bedtools v2.26.0
 '''
-BAM_DIR="../temp/alignments"
+
+#Config directions:
+BAM_DIR="../temp/alignments/Mphar"
+SPECIES = "Mphar"
+NLINE = 193779
+SPECIES_SNPEFF="mphar"
+REF_PREFIX = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic"
+RMINDIV = "GEN0051Aligned.sortedByCoord.out"
+
+#BAM_DIR = "../temp/alignments/Amel"
+#SPECIES = "Amel"
+#NLINE = 232191 #Get this from "wc -l Amel.exons.bed"...ideally would compute this automatically
+#SPECIES_SNPEFF = "a_mellifera"
+#REF_PREFIX = "../ref/GCF_000002195.4_Amel_4.5_genomic"
+
 SAMPLES, = glob_wildcards(BAM_DIR+"/{sample}.bam")
 PICARD = "/home/warnerm/local_install/picard.jar"
 
-REF_PREFIX = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic"
+GFF = REF_PREFIX+".gff"
 REF = REF_PREFIX+".fna"
-GFF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.gff"
 THREADS = 20
 PLATYPUS = "/home/warnerm/local_install/Platypus_0.8.1/Platypus.py"
 CALLER=["freebayes","samtools","GATK"]
 STAGE = ["larva","pupa","head","thorax","abdomen"]
-SPECIES = "Mphar"
-NLINE = 193779
-SPECIES_SNPEFF="m_pharaonis"
+ALL_SPEC= ["Mphar","Amel"]
 
 
 rule all:
-	input: "../var/"+SPECIES+".consensus.vcf.pos"
+	input: "../out/"+SPECIES+".substitutions.csv","../out/"+SPECIES+".gene.pi.csv",
+		expand("../out/alpha_locusF_{stage}.{species}.csv",stage=STAGE,species=SPECIES),
+		"../out/MKtest_globalAlpha_locusF_"+SPECIES
+
 
 rule makeBED:
 	input: GFF
@@ -86,7 +100,7 @@ rule editBed:
 
 #Convert bed files to interval lists for gatk
 rule intervalList:
-	input: bed="../ref/"+SPECIES+".subEx_{i}_edit.bed"
+	input: bed="../ref/"+SPECIES+".subEx_{i}_edit.bed",dict=rules.makeDict.output
 	output: "../ref/"+SPECIES+".subEx_{i}.interval_list"
 	shell: """export PATH=~/local_install/jdk1.8.0_05/bin:$PATH; java -jar {PICARD} BedToIntervalList I={input[bed]} O={output} SD={input[dict]}"""
 
@@ -136,13 +150,13 @@ rule BAYSIC:
 	output: "../var/"+SPECIES+".consensus.vcf.pos","../var/"+SPECIES+".consensus.vcf"
 	run: 
 		infiles = "".join([" --vcf " + i for i in input])
-		shell("perl baysic.pl --statsOutFile ../var/combined.stats --pvalCutoff 0.8 {} --countsOutFile ../var/combined.cts --vcfOutFile ../var/consensus.vcf".format(infiles))
+		shell("perl baysic.pl --statsOutFile ../var/combined.stats --pvalCutoff 0.8 {} --countsOutFile ../var/combined.cts --vcfOutFile {{output[1]}}".format(infiles))
 
 # select bi-allelic consensus sites
 rule consensusFilter:
     input: "../var/"+SPECIES+".freebayes.snp.primatives.sorted.vcf","../var/"+SPECIES+".consensus.vcf.pos"
     output: "../var/"+SPECIES+".final.recode.vcf"
-    shell: "vcftools --vcf {input[0]} --positions {input[1]} --max-alleles 2 --remove-indels --max-missing 0.9 --recode --mac 1 --out  ../var/final"
+    shell: "vcftools --vcf {input[0]} --positions {input[1]} --max-alleles 2 --remove-indels --max-missing 0.9 --recode --mac 1 --out  ../var/{SPECIES}.final"
 
 # estimate SNP effects
 rule snpEff:
@@ -153,11 +167,11 @@ rule snpEff:
 # determine which SNPs are fixed and which are polymorphic
 # for this we remove the outgroup and compute frequencies
 #Apis cerana is SRR957079
-#rule fixedPolymorphic:	
-#	input: rules.consensusFilter.output
-#	output: "../var/snps.csv"
-#	shell: """vcftools --vcf {input} --remove-indv SRR957079 --freq; \
- #   awk -v OFS="," ' NR>1 {{split($5,a,":"); if((a[2]=="1") || (a[2]=="0")) state="F"; else state="P"; print $1,$2,state}}' out.frq > {output} """
+rule fixedPolymorphic:	
+	input: rules.consensusFilter.output
+	output: "../var/"+SPECIES+".snps.csv"
+	shell: """vcftools --vcf {input} --remove-indv {RMINDIV} --freq; \
+		awk -v OFS="," ' NR>1 {{split($5,a,":"); if((a[2]=="1") || (a[2]=="0")) state="F"; else state="P"; print $1,$2,state}}' out.frq > {output} """
 
 rule getCDS:
 	input: GFF, REF
@@ -168,6 +182,11 @@ rule filterLongest:
 	input: rules.getCDS.output
 	output: "../ref/"+SPECIES+".longest.fa"
 	shell: "python filter_longest.py {input} > {output}"
+
+rule getLengths:
+	input: rules.filterLongest.output
+	output: "../out/"+SPECIES+"_lengths.txt"
+	shell: "python2.7 get_lengths.py {input} {output}"
 
 # exports silent and replacement sites from snpEff
 rule parseSilentReplacement:
@@ -182,47 +201,47 @@ rule silentReplacement:
 	shell: "python2.7 silent_replacement.py {input} > {output}"
 
 #Tabulate substitutions
-#rule tab_subs:
-#	input: rules.parseSilentReplacement.output,rules.fixedPolymorphic.output,rules.silentReplacement.output
-#	output: "../out/substitutions.csv"
-#	shell: "Rscript --vanilla tabulate_substitutions.R {input} {output}"
+rule tab_subs:
+	input: rules.parseSilentReplacement.output,rules.fixedPolymorphic.output,rules.silentReplacement.output
+	output: "../out/"+SPECIES+".substitutions.csv"
+	shell: "Rscript --vanilla tabulate_substitutions.R {input} {output}"
 
 
 #Make MKinput files for alpha classes (both species)
-#rule MKclass_input:
-#	input: "../out/substitutions.csv","../data/DEtests.RData","../data/MpharAnn.csv"
-#	output: expand("../MK_alpha_input/{stage}.{species}.csv",stage=STAGE,species=SPECIES),"../MK_alpha_input/old_abd.csv"
-#	shell: "Rscript MKalphaInput.R"
+rule MKclass_input:
+	input: "../out/"+SPECIES+".substitutions.csv","../data/DEtests.RData"
+	output: expand("../MK_alpha_input/{stage}.{species}.csv",stage=STAGE,species=SPECIES)
+	shell: "Rscript MKalphaInput.R {input}"
 
 #Calculate constraint from MKtest
-#rule MKtest_constraint:
-#	input: "../MK_alpha_input/abdomen.{species}.csv"
-#	output: "../out/MKtest_globalAlpha_locusF_{species}"
-#	shell: "MKtest -a 1 -f 2 -o {output} {input}"
+rule MKtest_constraint:
+	input: "../MK_alpha_input/abdomen.{species}.csv"
+	output: "../out/MKtest_globalAlpha_locusF_{species}"
+	shell: "MKtest -a 1 -f 2 -o {output} {input}"
 
 #Bootstrap MKtest for alpha results (class-specific alpha)
-#rule MKtest_alpha:
-#	input: "../MK_alpha_input/{stage}.{species}.csv"
-#	output: "../out/alpha_locusF_{stage}.{species}.csv"
-#	shell: "MKtest -a 3 -f 2 -P -100 -o {output} {input}"
-
-#Combine alpha results
-#rule combineMK:
-#	input: expand("../out/alpha_locusF_{stage}.{species}.csv",stage=STAGE,species=SPECIES)
-#	output: "../out/collectedAlpha.csv"
-#	shell: "Rscript combineAlpha.R ../out/alpha_locusF_ {output}"
+rule MKtest_alpha:
+	input: "../MK_alpha_input/{stage}.{species}.csv"
+	output: "../out/alpha_locusF_{stage}.{species}.csv"
+	shell: "MKtest -a 3 -f 2 -P -100 -o {output} {input}"
 
 #Calculate pi within honeybee population
 rule calcPi:
 	input: rules.consensusFilter.output
-	output: "../out/"+SPECIES+".pi"
-	shell: "vcftools --vcf {input} --site-pi --remove-indv SRR957079 --out ../out/apis"
+	output: "../out/"+SPECIES+".sites.pi"
+	shell: "vcftools --vcf {input} --site-pi --remove-indv {RMINDIV} --out ../out/{SPECIES}"
 
 #Calculate gene-wise pi
-#rule genePi:
-#	input: rules.parseSilentReplacement.output,rules.calcPi.output
-#	output: "../out/apis.gene.pi.csv"
-#	shell: "Rscript --vanilla pi_per_gene.R {input} {output}"
+rule genePi:
+	input: rules.parseSilentReplacement.output,rules.calcPi.output
+	output: "../out/"+SPECIES+".gene.pi.csv"
+	shell: "Rscript --vanilla pi_per_gene.R {input} {output}"
+
+
+rule snipre:
+	input: rules.silentReplacement.output, rules.parseSilentReplacement.output,rules.fixedPolymorphic.output
+	output: "../out/"+SPECIES+"snipre_results.csv"
+	shell: "Rscript --vanilla snipre.R {input} {output}"
 
 
 
