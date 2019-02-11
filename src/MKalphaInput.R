@@ -8,7 +8,10 @@ species = gsub(".substitutions.csv","",species)
 
 load(args[2])
 sub <- read.csv(subFile)
-MK = sub[,c(2,7,4,7,3,8,5,8)]
+
+#If FN,FS,or PS are 0, alpha is undefined
+sub = sub[sub$FN > 0 & sub$FS > 0 & sub$PS > 0,]
+MK = sub[,c(2,7,3,8,4,7,5,8)]
 
 if (species == "Mphar"){
   MK = cbind(MK,rep(44,nrow(MK)),rep(1,nrow(MK))) #22 M. pharaonis diploid indivs sampled
@@ -17,6 +20,7 @@ if (species == "Mphar"){
   MK = cbind(MK,rep(22,nrow(MK)),rep(1,nrow(MK))) #11 A. mellifera diploid indivs sampled
   DEdata = beeRes
 }
+
 
 addClass <- function(DEdat,sub,mk){
   mk$V10 = rep(1,nrow(mk))

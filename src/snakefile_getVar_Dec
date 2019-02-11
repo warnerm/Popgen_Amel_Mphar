@@ -12,18 +12,18 @@ bedtools v2.26.0
 '''
 
 #Config directions:
-#BAM_DIR="../temp/alignments/Mphar"
-#SPECIES = "Mphar"
-#NLINE = 193779
-#SPECIES_SNPEFF="mphar"
-#REF_PREFIX = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic"
-#RMINDIV = "GEN0051Aligned.sortedByCoord.out"
+BAM_DIR="../temp/alignments/Mphar"
+SPECIES = "Mphar"
+NLINE = 193779
+SPECIES_SNPEFF="mphar"
+REF_PREFIX = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic"
+RMINDIV = "GEN0051Aligned.sortedByCoord.out"
 
-BAM_DIR = "../temp/alignments/Amel"
-SPECIES = "Amel"
-NLINE = 232191 #Get this from "wc -l Amel.exons.bed"...ideally would compute this automatically
-SPECIES_SNPEFF = "a_mellifera"
-REF_PREFIX = "../ref/GCF_000002195.4_Amel_4.5_genomic"
+#BAM_DIR = "../temp/alignments/Amel"
+#SPECIES = "Amel"
+#NLINE = 232191 #Get this from "wc -l Amel.exons.bed"...ideally would compute this automatically
+#SPECIES_SNPEFF = "a_mellifera"
+#REF_PREFIX = "../ref/GCF_000002195.4_Amel_4.5_genomic"
 
 SAMPLES, = glob_wildcards(BAM_DIR+"/{sample}.bam")
 PICARD = "/home/warnerm/local_install/picard.jar"
