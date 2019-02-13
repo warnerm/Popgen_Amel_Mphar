@@ -39,7 +39,7 @@ ALL_SPEC= ["Mphar","Amel"]
 
 rule all:
 	input: "../out/"+SPECIES+".substitutions.csv","../out/"+SPECIES+".gene.pi.csv",
-		expand("../out/alpha_globalF_{stage}.{species}.csv",stage=STAGE,species=SPECIES),
+		"../out/alpha."+SPECIES+".csv",
 		"../out/MKtest_globalAlpha_locusF_"+SPECIES,
 		"../out/"+SPECIES+".snipre_results.csv"
 
@@ -225,6 +225,12 @@ rule MKtest_alpha:
 	input: "../MK_alpha_input/{stage}.{species}.csv"
 	output: "../out/alpha_globalF_{stage}.{species}.csv"
 	shell: "MKtest -a 3 -f 1 -P -100 -o {output} {input}"
+
+#Collect alpha results into one file
+rule collectAlpha:
+	input: expand("../out/alpha_globalF_{stage}.{species}.csv",stage=STAGE,species=SPECIES)
+	output: "../out/alpha."+SPECIES+".csv"
+	shell: "Rscript combineAlpha.R ../out/alpha_globalF_ {SPECIES} {output}"
 
 #Calculate pi within honeybee population
 rule calcPi:
