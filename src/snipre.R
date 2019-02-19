@@ -28,9 +28,9 @@ snps = snps[!duplicated(snps$pos),] #For some reason there are a bunch of duplic
 print("Data loaded")
 byPos <- merge(snps,annotation, by = "pos")
 mk <- ddply(byPos,~rna,summarize,
-                FN = sum(effect=="N" & state == "F"),
+                FR = sum(effect=="N" & state == "F"),
                 FS = sum(effect=="S" & state == "F"),
-                PN = sum(effect=="N" & state == "P"),
+                PR = sum(effect=="N" & state == "P"),
                 PS = sum(effect=="S" & state == "P"))
 
 rownames(silentReplacement) <- silentReplacement$isoform
