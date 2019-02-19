@@ -5,6 +5,7 @@ library(lme4)
 library(R2jags)
 library(arm)
 library(R2WinBUGS)
+library(plyr)
 
 print("Loading snipre source")
 source("snipre/B_SnIPRE_source.R")
@@ -15,29 +16,27 @@ print("Loading data")
 
 silentReplacement <- read.csv(args[1], header=T) # read expected silent replacement
 
-
 annotation <- read.csv(args[2],header=F) # read data on mutation effect
-colnames(annotation) <- c("chrom", "pos", "effect", "loc", "rna")
-annotation$pos <- paste(annotation$chrom,annotation$pos)
-annotation <- annotation[,-1]
+colnames(annotation) <- c("CHROM", "POS", "effect", "loc", "rna")
+annotation$pos = paste(annotation$CHROM,annotation$POS)
+annotation = annotation[!duplicated(annotation$pos),] #For some reason there are a bunch of duplicate lines
 snps <- read.csv(args[3],header=F) # read fixed vs polymorphic
-colnames(snps) <- c("chrom", "pos", "state")
-snps$pos <- paste(snps$chrom,snps$pos)
-snps <- snps[,-1]
+colnames(snps) <- c("CHROM", "POS", "state")
+snps$pos = paste(snps$CHROM,snps$POS)
+snps = snps[!duplicated(snps$pos),] #For some reason there are a bunch of duplicate lines
 
 print("Data loaded")
-byPos <- merge(snps,annotation, by.x="pos", by.y="pos")
+byPos <- merge(snps,annotation, by = "pos")
+mk <- ddply(byPos,~rna,summarize,
+                FN = sum(effect=="N" & state == "F"),
+                FS = sum(effect=="S" & state == "F"),
+                PN = sum(effect=="N" & state == "P"),
+                PS = sum(effect=="S" & state == "P"))
 
 rownames(silentReplacement) <- silentReplacement$isoform
 silentReplacement <- silentReplacement[,-1]
 
-mk <- data.frame(FS = as.data.frame(table(subset(byPos,state=="F" & effect=="S")$rna))$Freq,
-FR = as.data.frame(table(subset(byPos,state=="F" & effect=="N")$rna))$Freq,
-PS = as.data.frame(table(subset(byPos,state=="P" & effect=="S")$rna))$Freq,
-PR = as.data.frame(table(subset(byPos,state=="P" & effect=="N")$rna))$Freq)
-rownames(mk) <- as.data.frame(table(subset(byPos,state=="F" & effect=="S")$rna))$Var1
-
-dnds <- merge(mk,silentReplacement,by=0)
+dnds <- merge(mk,silentReplacement,by.x="rna",by.y="isoform")
 colnames(dnds)[1] <- "gene"
 dnds$nout <- 2
 dnds$npop <- 20*2
