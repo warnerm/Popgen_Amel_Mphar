@@ -24,6 +24,7 @@ RMINDIV = "GEN0051Aligned.sortedByCoord.out"
 #NLINE = 232191 #Get this from "wc -l Amel.exons.bed"...ideally would compute this automatically
 #SPECIES_SNPEFF = "a_mellifera"
 #REF_PREFIX = "../ref/GCF_000002195.4_Amel_4.5_genomic"
+#RMINDIV = "SRR957079"
 
 SAMPLES, = glob_wildcards(BAM_DIR+"/{sample}.bam")
 PICARD = "/home/warnerm/local_install/picard.jar"
@@ -39,9 +40,10 @@ ALL_SPEC= ["Mphar","Amel"]
 
 rule all:
 	input: "../out/"+SPECIES+".substitutions.csv","../out/"+SPECIES+".gene.pi.csv",
-		"../out/alpha."+SPECIES+".csv",
+		"../out/"+SPECIES+".alpha.csv",
 		"../out/MKtest_globalAlpha_locusF_"+SPECIES,
-		"../out/"+SPECIES+".snipre_results.csv"
+		"../out/"+SPECIES+".snipre_results.csv",
+		"../temp/aln_read/"+SPECIES+".folded.saf.pos.gz"
 
 
 rule makeBED:
@@ -155,7 +157,7 @@ rule BAYSIC:
 
 # select bi-allelic consensus sites
 rule consensusFilter:
-    input: "../var/"+SPECIES+".freebayes.snp.primatives.sorted.vcf","../var/"+SPECIES+".consensus.vcf.pos"
+    input: "../var/"+SPECIES+".samtools.snp.primatives.sorted.vcf","../var/"+SPECIES+".consensus.vcf.pos"
     output: "../var/"+SPECIES+".final.recode.vcf"
     shell: "vcftools --vcf {input[0]} --positions {input[1]} --max-alleles 2 --remove-indels --max-missing 0.9 --recode --mac 1 --out  ../var/{SPECIES}.final"
 
@@ -168,6 +170,7 @@ rule snpEff:
 # determine which SNPs are fixed and which are polymorphic
 # for this we remove the outgroup and compute frequencies
 #Apis cerana is SRR957079
+#NOTE: for some reason there are duplicate lines in the output for this rule
 rule fixedPolymorphic:	
 	input: rules.consensusFilter.output
 	output: "../var/"+SPECIES+".snps.csv"
@@ -223,14 +226,14 @@ rule MKtest_constraint:
 #Bootstrap MKtest for alpha results (class-specific alpha)
 rule MKtest_alpha:
 	input: "../MK_alpha_input/{stage}.{species}.csv"
-	output: "../out/alpha_globalF_{stage}.{species}.csv"
-	shell: "MKtest -a 3 -f 1 -P -100 -o {output} {input}"
+	output: "../out/alpha_locusF_{stage}.{species}.csv"
+	shell: "MKtest -a 3 -f 2 -P -200 -o {output} {input}"
 
 #Collect alpha results into one file
 rule collectAlpha:
-	input: expand("../out/alpha_globalF_{stage}.{species}.csv",stage=STAGE,species=SPECIES)
-	output: "../out/alpha."+SPECIES+".csv"
-	shell: "Rscript combineAlpha.R ../out/alpha_globalF_ {SPECIES} {output}"
+	input: expand("../out/alpha_locusF_{stage}.{species}.csv",stage=STAGE,species=SPECIES)
+	output: "../out/"+SPECIES+".alpha.csv"
+	shell: "Rscript combineAlpha.R ../out/alpha_locusF_ {SPECIES} {output}"
 
 #Calculate pi within honeybee population
 rule calcPi:
@@ -249,6 +252,11 @@ rule snipre:
 	input: rules.silentReplacement.output, rules.parseSilentReplacement.output,rules.fixedPolymorphic.output
 	output: "../out/"+SPECIES+".snipre_results.csv"
 	shell: "Rscript --vanilla snipre.R {input} {output}"
+
+rule foldedSFS:
+	input: "../temp/aln_read/files"+SPECIES #List of BAM files
+	output: "../temp/aln_read/"+SPECIES+".folded.saf.pos.gz"
+	shell: "cd ../temp/aln_read/; angsd -bam files{SPECIES} -doSaf 1 -out {SPECIES}.folded -anc ../{REF} -GL 2 -fold 1 -P {THREADS}"
 
 
 
