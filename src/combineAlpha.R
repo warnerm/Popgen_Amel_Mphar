@@ -9,7 +9,8 @@ outputFile = args[3]
 collect <- function(stage){
   df <- read.csv(paste(prefix,stage,".",species,".csv",sep=""),sep="\t",head=T)
   df = df[-c(1:2),]
-  df = df[-seq(1,nrow(df) - 1, by=2),c("alpha.Cat1","alpha.Cat2","alpha.Cat3")]
+  df = df[-seq(1,nrow(df) - 1, by=2),c((ncol(df) -2):ncol(df))]
+  df = df[c("alpha.Cat1","alpha.Cat2","alpha.Cat3")]
   d2 = apply(df,2,function(x) as.numeric(as.character(x)))
   means = apply(d2,2,mean)
   c1 = apply(d2,2,function(x) quantile(x,0.025))
