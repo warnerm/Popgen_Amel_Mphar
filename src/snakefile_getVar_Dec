@@ -88,7 +88,7 @@ rule freeBayes:
 	output: "../var/"+SPECIES+".fb_{i}.vcf"
 	params: 
 		files = "-b " + " -b ".join(expand("../temp/aln_read/{sample}.bam",sample=SAMPLES)),
-	shell: "freebayes -= {params.files} -v {output} -f {REF} --min-alternate-count 4 --use-best-n-alleles 3 --targets {input[bed]}"
+	shell: "freebayes -= {params.files} -v {output} -f {REF} --targets {input[bed]}"
 
 rule mergeFB:
 	input: expand("../var/"+SPECIES+".fb_{i}.vcf",i=range(20))
@@ -118,7 +118,7 @@ rule GATK:
 				-L {input[intervals]} \
 				--heterozygosity 0.002 \
 				--mbq 20 \
-				--max-alternate-alleles 4"""
+				--max-alternate-alleles 2"""
 
 rule mergeGATK:
 	input: expand("../var/"+SPECIES+".gatk_{i}.vcf",i=range(20))
@@ -159,7 +159,7 @@ rule BAYSIC:
 rule consensusFilter:
     input: "../var/"+SPECIES+".samtools.snp.primatives.sorted.vcf","../var/"+SPECIES+".consensus.vcf.pos"
     output: "../var/"+SPECIES+".final.recode.vcf"
-    shell: "vcftools --vcf {input[0]} --positions {input[1]} --max-alleles 2 --remove-indels --max-missing 0.9 --recode --mac 1 --out  ../var/{SPECIES}.final"
+    shell: "vcftools --vcf {input[0]} --positions {input[1]} --max-alleles 2 --remove-indels --recode --out  ../var/{SPECIES}.final"
 
 # estimate SNP effects
 rule snpEff:
