@@ -17,7 +17,7 @@ SPECIES = "Mphar"
 NLINE = 193779
 SPECIES_SNPEFF="mphar"
 REF_PREFIX = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic"
-RMINDIV = "GEN0051Aligned.sortedByCoord.out"
+RMINDIV = "--remove-indv GEN045Aligned.sortedByCoord.out --remove-indv GEN0051Aligned.sortedByCoord.out"
 
 #BAM_DIR = "../temp/alignments/Amel"
 #SPECIES = "Amel"
@@ -118,7 +118,8 @@ rule GATK:
 				-L {input[intervals]} \
 				--heterozygosity 0.002 \
 				--mbq 20 \
-				--max-alternate-alleles 2"""
+				--max-alternate-alleles 2
+				--allow_potentially_misencoded_quality_scores"""
 
 rule mergeGATK:
 	input: expand("../var/"+SPECIES+".gatk_{i}.vcf",i=range(20))
@@ -131,21 +132,10 @@ rule samtools:
 	shell: "samtools mpileup -l {input[bed]} -ugf {REF} {input[BAMs]} | bcftools call -vc - | vcfutils.pl varFilter -D 500 > {output}"
 
 
-#remove insertions and deletions
-rule rmIndel:
-	input: "../var/"+SPECIES+".{VCFcaller}.vcf"
-	output: "../var/"+SPECIES+".{VCFcaller}.snp.recode.vcf"
-	shell: "vcftools --vcf {input} --remove-indels --out ../var/{SPECIES}.{wildcards.VCFcaller}.snp --recode --recode-INFO-all"
-
 rule allelicPrimitives:
 	input: "../var/"+SPECIES+".{VCFcaller}.snp.recode.vcf"
 	output: "../var/"+SPECIES+".{VCFcaller}.snp.primatives.vcf"
 	shell: "cat {input} | vcfallelicprimitives -kg > {output}"
-
-rule vcfSort:
-	input: "../var/"+SPECIES+".{VCFcaller}.snp.primatives.vcf"
-	output: "../var/"+SPECIES+".{VCFcaller}.snp.primatives.sorted.vcf"
-	shell: "vcf-sort {input} > {output}"
 
 # generate consensus SNP calls
 rule BAYSIC: 	
@@ -174,7 +164,7 @@ rule snpEff:
 rule fixedPolymorphic:	
 	input: rules.consensusFilter.output
 	output: "../var/"+SPECIES+".snps.csv"
-	shell: """vcftools --vcf {input} --remove-indv {RMINDIV} --freq; \
+	shell: """vcftools --vcf {input} {RMINDIV} --freq; \
 		awk -v OFS="," ' NR>1 {{split($5,a,":"); if((a[2]=="1") || (a[2]=="0")) state="F"; else state="P"; print $1,$2,state}}' out.frq > {output} """
 
 rule getCDS:
@@ -239,7 +229,7 @@ rule collectAlpha:
 rule calcPi:
 	input: rules.consensusFilter.output
 	output: "../out/"+SPECIES+".sites.pi"
-	shell: "vcftools --vcf {input} --site-pi --remove-indv {RMINDIV} --out ../out/{SPECIES}"
+	shell: "vcftools --vcf {input} --site-pi {RMINDIV} --out ../out/{SPECIES}"
 
 #Calculate gene-wise pi
 rule genePi:
