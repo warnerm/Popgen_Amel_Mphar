@@ -133,13 +133,13 @@ rule samtools:
 
 
 rule allelicPrimitives:
-	input: "../var/"+SPECIES+".{VCFcaller}.snp.recode.vcf"
-	output: "../var/"+SPECIES+".{VCFcaller}.snp.primatives.vcf"
+	input: "../var/"+SPECIES+".{VCFcaller}.vcf"
+	output: "../var/"+SPECIES+".{VCFcaller}.primatives.vcf"
 	shell: "cat {input} | vcfallelicprimitives -kg > {output}"
 
 # generate consensus SNP calls
 rule BAYSIC: 	
-	input: expand("../var/"+SPECIES+".{VCFcaller}.snp.primatives.sorted.vcf", VCFcaller=CALLER)
+	input: expand("../var/"+SPECIES+".{VCFcaller}.primatives.vcf", VCFcaller=CALLER)
 	output: "../var/"+SPECIES+".consensus.vcf.pos","../var/"+SPECIES+".consensus.vcf"
 	run: 
 		infiles = "".join([" --vcf " + i for i in input])
@@ -147,7 +147,7 @@ rule BAYSIC:
 
 # select bi-allelic consensus sites
 rule consensusFilter:
-    input: "../var/"+SPECIES+".samtools.snp.primatives.sorted.vcf","../var/"+SPECIES+".consensus.vcf.pos"
+    input: "../var/"+SPECIES+".snp.primatives.vcf","../var/"+SPECIES+".consensus.vcf.pos"
     output: "../var/"+SPECIES+".final.recode.vcf"
     shell: "vcftools --vcf {input[0]} --positions {input[1]} --max-alleles 2 --remove-indels --recode --out  ../var/{SPECIES}.final"
 
