@@ -48,8 +48,8 @@ rule all:
 
 rule makeBED:
 	input: GFF
-	output: "../ref/{SPECIES}.bed"
-	shell: """gff2bed {input} > {output}"""
+	output: "../ref/"+SPECIES+".bed"
+	shell: """cat {input} | gff2bed > {output}"""
 
 rule makeDict:
 	input: REF
