@@ -48,7 +48,7 @@ rule all:
 
 rule makeBED:
 	input: GFF
-	output: "../ref/{SPECIES}.exons.bed"
+	output: "../ref/"+{SPECIES}+".exons.bed"
 	shell: """grep "exon" {GFF} | gff2bed > {output}"""
 
 rule makeDict:
