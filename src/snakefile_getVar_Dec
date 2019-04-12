@@ -259,4 +259,8 @@ rule foldedSFS:
 	shell: "cd ../temp/aln_read/; angsd -bam files{SPECIES} -doSaf 1 -out {SPECIES}.folded -anc ../{REF} -GL 2 -fold 1 -P {THREADS}"
 
 
+gatk --java-options "-Xmx30g" HaplotypeCaller -R GCF_000980195.1_M.pharaonis_V2.0_genomic.fna -I ../temp/aln_read/MPCAligned.sortedByCoord.out.bam -I ../temp/aln_read/MP_U17Aligned.sortedByCoord.out.bam -O testRun.vcf --heterozygosity 0.002 --mbq 20 --max-alternate-alleles 2 --minimum-mapping-quality 1 -L Mphar.sub_17.bed
+
+
+
 
