@@ -253,10 +253,7 @@ rule snipre:
 	output: "../out/"+SPECIES+".snipre_results.csv"
 	shell: "Rscript --vanilla snipre.R {input} {output}"
 
-rule foldedSFS:
-	input: "../temp/aln_read/files"+SPECIES #List of BAM files
-	output: "../temp/aln_read/"+SPECIES+".folded.saf.pos.gz"
-	shell: "cd ../temp/aln_read/; angsd -bam files{SPECIES} -doSaf 1 -out {SPECIES}.folded -anc ../{REF} -GL 2 -fold 1 -P {THREADS}"
+
 
 
 
