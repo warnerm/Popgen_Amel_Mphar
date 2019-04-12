@@ -118,8 +118,7 @@ rule GATK:
 				-L {input[intervals]} \
 				--heterozygosity 0.002 \
 				--mbq 20 \
-				--max-alternate-alleles 2
-				--allow_potentially_misencoded_quality_scores"""
+				--max-alternate-alleles 2"""
 
 rule mergeGATK:
 	input: expand("../var/"+SPECIES+".gatk_{i}.vcf",i=range(20))
@@ -147,9 +146,9 @@ rule BAYSIC:
 
 # select bi-allelic consensus sites
 rule consensusFilter:
-    input: "../var/"+SPECIES+".snp.primatives.vcf","../var/"+SPECIES+".consensus.vcf.pos"
+    input: "../var/"+SPECIES+".consensus.vcf"
     output: "../var/"+SPECIES+".final.recode.vcf"
-    shell: "vcftools --vcf {input[0]} --positions {input[1]} --max-alleles 2 --remove-indels --recode --out  ../var/{SPECIES}.final"
+    shell: "vcftools --vcf {input} --max-alleles 2 --remove-indels --recode --out  ../var/{SPECIES}.final"
 
 # estimate SNP effects
 rule snpEff:
