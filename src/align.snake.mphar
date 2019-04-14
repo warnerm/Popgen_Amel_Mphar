@@ -1,19 +1,19 @@
-SAMPLES, = glob_wildcards("../data/fastq/{sample}_1.fastq")
+SAMPLES, = glob_wildcards("../data/fastq/Amel/{sample}_1.fastq")
 
-REF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.fna"
-GFF = "../ref/GCF_000980195.1_M.pharaonis_V2.0_genomic.gff"
+REF = "../ref/GCF_000002195.4_Amel_4.5_genomic.fna"
+GFF = "../ref/GCF_000002195.4_Amel_4.5_genomic.gff"
 
 THREADS = 20
 
 rule all:
-	input: expand("../temp/alignments/Mphar/{sample}Aligned.sortedByCoord.out.bam",sample=SAMPLES)
+	input: expand("../temp/alignments/Amel/{sample}_bwa.bam",sample=SAMPLES)
 
 rule buildIndex:
 	input: REF
-	output: "../ref/Mphar_STAR/chrLength.txt"
-	shell: "STAR --runThreadN {THREADS} --runMode genomeGenerate --genomeDir ../ref/Mphar_STAR --genomeFastaFiles {REF}"
+	output: "../ref/"+{REF}+".bwt"
+	shell: "bowtie2-build {REF} {REF}"
 
 rule alignReads:
-	input: "../ref/Mphar_STAR/chrLength.txt",p1="../data/fastq/{sample}_1.fastq",p2="../data/fastq/{sample}_2.fastq"
-	output: "../temp/alignments/Mphar/{sample}Aligned.sortedByCoord.out.bam"
-	shell: """STAR --runThreadN {THREADS} --genomeDir ../ref/Mphar_STAR --readFilesIn {input[p1]} {input[p2]} --outFileNamePrefix ../temp/alignments/Mphar/{wildcards.sample} --outSAMtype BAM SortedByCoordinate"""
+	input: "../ref/"+{REF}+".bwt",p1="../data/fastq/{sample}_1.fastq",p2="../data/fastq/{sample}_2.fastq"
+	output: "../temp/alignments/Amel_bowtie/{sample}.bam"
+	shell: """bowtie2 -p {TREADS} -x {REF} -1 {input[p1]} -2 {input[p2]) | samtools view -bS > {output}"""
