@@ -10,10 +10,10 @@ rule all:
 
 rule buildIndex:
 	input: REF
-	output: "../ref/"+{REF}+".bwt"
+	output: "../ref/"+REF+".bwt"
 	shell: "bowtie2-build {REF} {REF}"
 
 rule alignReads:
-	input: "../ref/"+{REF}+".bwt",p1="../data/fastq/{sample}_1.fastq",p2="../data/fastq/{sample}_2.fastq"
+	input: "../ref/"+REF+".bwt",p1="../data/fastq/{sample}_1.fastq",p2="../data/fastq/{sample}_2.fastq"
 	output: "../temp/alignments/Amel_bowtie/{sample}.bam"
 	shell: """bowtie2 -p {TREADS} -x {REF} -1 {input[p1]} -2 {input[p2]) | samtools view -bS > {output}"""

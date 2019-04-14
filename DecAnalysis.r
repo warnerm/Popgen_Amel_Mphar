@@ -122,48 +122,59 @@ plotSummed <- function(d){
 }
 
 
-#Substitution data
-mp <- read.csv("~/GitHub/popgenAM/results/Mphar.substitutions.csv")
-mp1 = mp[mp$FN > 0 & mp$FS > 0 & mp$PS > 0,]
-ap <- read.csv("~/GitHub/popgenAM/results/Amel.substitutions.csv")
-ap1 = ap[ap$FN > 0 & ap$FS > 0 & ap$PS > 0,]
+# #Substitution data
+# mp <- read.csv("~/GitHub/popgenAM/results/Mphar.substitutions.csv")
+# mp1 = mp[mp$FN > 0 & mp$FS > 0 & mp$PS > 0,]
+# ap <- read.csv("~/GitHub/popgenAM/results/Amel.substitutions.csv")
+# ap1 = ap[ap$FN > 0 & ap$FS > 0 & ap$PS > 0,]
+# 
+# #Constraint
+# mC <- read.table("~/GitHub/popgenAM/results/MKtest_globalAlpha_locusF_Mphar")
+# aC <- read.table("~/GitHub/popgenAM/results/MKtest_globalAlpha_locusF_Amel")
+# ap1 = cbind(ap1,f=as.numeric(as.character((t(aC[2,4:(ncol(aC) - 1)])))))
+# mp1 = cbind(mp1,f=as.numeric(as.character((t(mC[2,4:(ncol(mC) - 1)])))))
+# 
+# #snipre
+# mS=read.csv("~/GitHub/popgenAM/results/Mphar.snipre_results.csv")  # 10913 rows
+# aS <- read.csv("~/GitHub/popgenAM/results/Amel.snipre_results.csv")
+# colnames(aS)[1] = "isoform"
+# colnames(mS)[1] = "isoform"
+# mp1 = merge(mp1[,c(1,6,9)],mS,by="isoform",all.x=T)
+# ap1 = merge(ap1[,c(1,6,9)],aS,by="isoform",all.x=T)
+# mp1 = mp1[,colnames(mp1)!="isoform"]
+# ap1 = ap1[,colnames(ap1)!="isoform"]
+# 
+# 
+# #dn/ds 
+# mD <- read.table("~/GitHub/devnetwork/results/mphar_sinv_dnds.txt",head=T)
+# aD <- read.table("~/GitHub/devnetwork/results/amel_cerana_dnds.txt",head=T)
+# aD$dN_dS[aD$dN_dS > 5] = 2.15 #Two genes show dN/dS of 99, so just set to the highest value
+# mp1 = merge(mD,mp1,by="Gene",all.y=T)
+# ap1 = merge(aD,ap1,by="Gene",all.y=T)
+# 
+# ap1$species="honey bee"
+# mp1$species="ant"
+# 
+# #Add in differential expression results
+# ap2 = merge(ap1,beeRes[[2]],by="Gene")
+# mp2 = merge(mp1,antRes[[2]],by="Gene")
+# d = rbind(ap2,mp2)
+# d$constraint = 1-d$f
 
-#Constraint
-mC <- read.table("~/GitHub/popgenAM/results/MKtest_globalAlpha_locusF_Mphar")
-aC <- read.table("~/GitHub/popgenAM/results/MKtest_globalAlpha_locusF_Amel")
-ap1 = cbind(ap1,f=as.numeric(as.character((t(aC[2,4:(ncol(aC) - 1)])))))
-mp1 = cbind(mp1,f=as.numeric(as.character((t(mC[2,4:(ncol(mC) - 1)])))))
-
-#snipre
-mS=read.csv("~/GitHub/popgenAM/results/Mphar.snipre_results.csv")  # 10913 rows
-aS <- read.csv("~/GitHub/popgenAM/results/Amel.snipre_results.csv")
-colnames(aS)[1] = "isoform"
-colnames(mS)[1] = "isoform"
-mp1 = merge(mp1[,c(1,6,9)],mS,by="isoform",all.x=T)
-ap1 = merge(ap1[,c(1,6,9)],aS,by="isoform",all.x=T)
-mp1 = mp1[,colnames(mp1)!="isoform"]
-ap1 = ap1[,colnames(ap1)!="isoform"]
-
-
-#dn/ds 
-mD <- read.table("~/GitHub/devnetwork/results/mphar_sinv_dnds.txt",head=T)
-aD <- read.table("~/GitHub/devnetwork/results/amel_cerana_dnds.txt",head=T)
-aD$dN_dS[aD$dN_dS > 5] = 2.15 #Two genes show dN/dS of 99, so just set to the highest value
-mp1 = merge(mD,mp1,by="Gene",all.y=T)
-ap1 = merge(aD,ap1,by="Gene",all.y=T)
-
-ap1$species="honey bee"
-mp1$species="ant"
-
-#Add in differential expression results
-ap2 = merge(ap1,beeRes[[2]],by="Gene")
-mp2 = merge(mp1,antRes[[2]],by="Gene")
-d = rbind(ap2,mp2)
-d$constraint = 1-d$f
-
+ap <- read.csv("~/GitHub/popgenAM/results/Amel.snipre_results.csv")
+mp <- read.csv("~/Dropbox/monomorium nurses/data/bayesian_results.csv")
+ap2 <- read.csv("~/GitHub/popgenAM/results/Amel.substitutions.csv")
+ap = merge(ap,ap2[,c(1,6)],by.x="gene",by.y="isoform")
+ap = ap[c(26,2:25)]
+ap$species = "honey bee"
+mp$species = "ant"
+ap = merge(ap,beeRes[[2]],by="Gene")
+mp = merge(mp,antRes[[2]],by.x="gene",by.y="Gene")
+colnames(mp)[1] = "Gene"
+d = rbind(ap,mp)
 
 ###Figure 1: molecular evolution of caste-biased genes across development
-dM <- melt(d,id.vars = colnames(d)[-c(29:33)])
+dM <- melt(d,id.vars = colnames(d)[-c(27:31)])
 
 dM$value = factor(dM$value,levels = c("queen","worker","nonDE"))
 levels(dM$value) = c("queen-biased","worker-biased","non-biased")
@@ -193,20 +204,21 @@ res = lapply(list("ant","honey bee"),function(x){
   })
 })
 
+#Make table of positively selected genes
+posChi <- function(species,stage){
+  df = dM[dM$species==species & dM$variable==stage,]
+  df$pos_sel = 0
+  df$pos_sel[df$BSnIPRE.class=="pos"]=1
+  tbl = table(df$pos_sel,df$value)
+  return(list(tbl,chisq.test(tbl)))
+}
 
-p <- ggplot(dM[dM$BSnIPRE.gamma > 0,],aes(x=variable,y=BSnIPRE.gamma,fill= value))+
-  geom_boxplot(aes(fill = value),outlier.shape = NA,notch=T,alpha=0.8)+
-  facet_grid(. ~ species)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("f (proportion of unconstrained loci)")+
-  xlab("stage/tissue")+
-  coord_cartesian(ylim = c(0,0.6))+
-  theme(legend.title = element_blank(),
-        legend.text = element_text(size=14),
-        legend.position = c(0.9,0.88),
-        axis.title.x = element_text(margin = margin(t = 20,r=0,l=0,b=0)),
-        axis.title.y = element_text(margin = margin(t = 0,r=15,l=0,b=0)))
+res <- lapply(c("ant","honey bee"),function(x){
+  lapply(levels(dM$variable),function(y){
+    posChi(x,y)
+  })
+})
+
 
 #Comparing to virgin queens
 combineDE <- function(DEres,evol){
@@ -214,7 +226,7 @@ combineDE <- function(DEres,evol){
   return(merge(de,evol,by="Gene"))
 }
 load("results/DEresults_extra.RData")
-dM <- rbind(combineDE(antVQres,mp1),combineDE(beeVQres,ap1)) 
+dM <- rbind(combineDE(antVQres,mp),combineDE(beeVQres,ap)) 
 dM$value = factor(dM$value,levels = c("mated","virgin","nonDE"))
 levels(dM$value) = c("mated queen","virgin queen","non-biased")
 
@@ -240,7 +252,7 @@ res = lapply(list("ant","honey bee"),function(x){
   })
 })
 #nurses
-dM <- rbind(combineDE(antNQres,mp1),combineDE(beeNQres,ap1)) 
+dM <- rbind(combineDE(antNQres,mp),combineDE(beeNQres,ap)) 
 dM$value = factor(dM$value,levels = c("queen","worker","nonDE"))
 levels(dM$value) = c("queen-biased","nurse-biased","non-biased")
 
@@ -267,7 +279,7 @@ res = lapply(list("ant","honey bee"),function(x){
 })
 
 #foragers
-dM <- rbind(combineDE(antFQres,mp1),combineDE(beeFQres,ap1)) 
+dM <- rbind(combineDE(antFQres,mp),combineDE(beeFQres,ap)) 
 dM$value = factor(dM$value,levels = c("queen","worker","nonDE"))
 levels(dM$value) = c("queen-biased","forager-biased","non-biased")
 
@@ -294,382 +306,378 @@ res = lapply(list("ant","honey bee"),function(x){
   })
 })
 
-ggplot(dM[dM$variable=="abdomen" & dM$value=="queen",],aes(x=BSnIPRE.gamma,y=BSnIPRE.f))+
-  geom_hex(bins=100)+
-  facet_grid(. ~ species)+
-  main_theme
-
-ggplot(dM[dM$variable=="abdomen" & dM$value=="worker",],aes(x=BSnIPRE.gamma,y=BSnIPRE.f))+
-  geom_hex(bins=100)+
-  facet_grid(. ~ species)+
-  main_theme
-
-
-##Filtering for genes that are DE in both species
-aDE = melt(antRes[[2]],id.vars = "Gene")
-bDE = melt(beeRes[[2]],id.vars = "Gene")
-aDE2 = merge(aDE,ACUogg,by.x="Gene",by.y="gene_Mphar")
-bDE2 = merge(bDE,ACUogg,by.x="Gene",by.y="gene_Amel")
-allDE = merge(aDE2,bDE2,by=c("OGGacu","variable"))
-keep = allDE[allDE$value.x==allDE$value.y,]
-keep = keep[,-c(3,4,6)]
-colnames(keep)[4] = "value"
-
-#merge with evol data
-mpK = merge(mp1,keep,by.x="Gene",by.y="gene_Mphar")
-apK = merge(ap1,keep,by.x="Gene",by.y="gene_Amel")
-dM = rbind(mpK[,-c(32)],apK[,-c(33)])
-dM = droplevels(dM[dM$variable!="larva" & dM$variable!="pupa",])
-
-summed <- getSummed2(dM)
-
-F1p <- lapply(summed,plotSummed)
-
-F1p <- lapply(seq(1,length(stat_name)),function(i){
-  F1p[[i]]+ylab(paste("mean",stat_name[i]))
-})
-
-pMain <- arrangeGrob(F1p[[1]],F1p[[6]],F1p[[5]],nrow=3)
-ggsave(pMain,file="~/GitHub/popgenAM/figures/Stats1_onlyShared.png",height=16,width=8,dpi=300)
-
-
-pMain <- arrangeGrob(F1p[[2]],F1p[[3]],F1p[[4]],nrow=3)
-ggsave(pMain,file="~/GitHub/popgenAM/figures/Stats2_onlyShared.png",height=16,width=8,dpi=300)
-
-###Combining pharaoh datasets
+# 
+# ##Filtering for genes that are DE in both species
+# aDE = melt(antRes[[2]],id.vars = "Gene")
+# bDE = melt(beeRes[[2]],id.vars = "Gene")
+# aDE2 = merge(aDE,ACUogg,by.x="Gene",by.y="gene_Mphar")
+# bDE2 = merge(bDE,ACUogg,by.x="Gene",by.y="gene_Amel")
+# allDE = merge(aDE2,bDE2,by=c("OGGacu","variable"))
+# keep = allDE[allDE$value.x==allDE$value.y,]
+# keep = keep[,-c(3,4,6)]
+# colnames(keep)[4] = "value"
+# 
+# #merge with evol data
+# mpK = merge(mp1,keep,by.x="Gene",by.y="gene_Mphar")
+# apK = merge(ap1,keep,by.x="Gene",by.y="gene_Amel")
+# dM = rbind(mpK[,-c(32)],apK[,-c(33)])
+# dM = droplevels(dM[dM$variable!="larva" & dM$variable!="pupa",])
+# 
+# summed <- getSummed2(dM)
+# 
+# F1p <- lapply(summed,plotSummed)
+# 
+# F1p <- lapply(seq(1,length(stat_name)),function(i){
+#   F1p[[i]]+ylab(paste("mean",stat_name[i]))
+# })
+# 
+# pMain <- arrangeGrob(F1p[[1]],F1p[[6]],F1p[[5]],nrow=3)
+# ggsave(pMain,file="~/GitHub/popgenAM/figures/Stats1_onlyShared.png",height=16,width=8,dpi=300)
+# 
+# 
+# pMain <- arrangeGrob(F1p[[2]],F1p[[3]],F1p[[4]],nrow=3)
+# ggsave(pMain,file="~/GitHub/popgenAM/figures/Stats2_onlyShared.png",height=16,width=8,dpi=300)
+# 
+# ###Combining pharaoh datasets
 mpO <- read.csv("~/GitHub/devnetwork/data/MpharAnn.csv")
-mpO2 = mpO[,c(1,8:10)]
-mpM = melt(mpO2,id.vars = "Gene")
-mpM$variable=as.character(mpM$variable)
-mpM$value=as.character(mpM$value)
-mpM$variable[mpM$variable=="Head"]="head"
-mpM$variable[mpM$variable=="Gaster"]="abdomen"
-mpM$variable[mpM$variable=="Larval"]="larva"
-mpM$value[mpM$value=="Worker"]="worker"
-mpM$value[mpM$value=="Reproductive"]="queen"
-mpM$value[mpM$value=="NDE"]="nonDE"
-
-m2 = merge(mpM,mp1,by="Gene")
-
-m2$value = factor(m2$value,levels = c("queen","worker","nonDE"))
-m2$variable=factor(m2$variable,levels = c("larva","head","abdomen"))
-p <- ggplot(m2,aes(x=variable,y=BSnIPRE.f,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("BSnIPRE.f (new)")+
-  xlab("stage/tissue")+
-  coord_cartesian(ylim=c(0,0.5))+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = "right",
-        legend.justification = c(0,1))
-
-ggsave(p,file="figures/oldExpr_newF.png",height=8,width=8,dpi=300)
-
-p <- ggplot(m2,aes(x=variable,y=BSnIPRE.est,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("BSnIPRE.est (new)")+
-  xlab("stage/tissue")+
-  coord_cartesian(ylim=c(-0.5,1))+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = "right",
-        legend.justification = c(0,1))
-
-ggsave(p,file="figures/oldExpr_newEst.png",height=8,width=8,dpi=300)
-
-oldSnipre <- read.csv("~/Dropbox/monomorium nurses/data/bayesian_results.csv")
-
-m2 = merge(mpM,oldSnipre,by.x="Gene",by.y="gene")
-m2$variable=factor(m2$variable,levels = c("larva","head","abdomen"))
-
-m2$value = factor(m2$value,levels = c("queen","worker","nonDE"))
-p <- ggplot(m2,aes(x=variable,y=BSnIPRE.f,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("BSnIPRE.f (old)")+
-  xlab("stage/tissue")+
-  coord_cartesian(ylim=c(0,0.5))+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = "right",
-        legend.justification = c(0,1))
-ggsave(p,file="figures/oldExpr_oldF.png",height=8,width=8,dpi=300)
-
-p <- ggplot(m2,aes(x=variable,y=BSnIPRE.est,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("BSnIPRE.est (old)")+
-  xlab("stage/tissue")+
-  coord_cartesian(ylim=c(-0.5,1))+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = "right",
-        legend.justification = c(0,1))
-ggsave(p,file="figures/oldExpr_oldEst.png",height=8,width=8,dpi=300)
-
-
-mpC = merge(aDE,mpM,by = c("Gene","variable"))
-
-mpCfilt = mpC[mpC$value.x==mpC$value.y,]
-mpCfilt = mpCfilt[,-c(4)]
-colnames(mpCfilt)[3] = "value"
-
-stats = c("BSnIPRE.gamma","BSnIPRE.est","BSnIPRE.f","f")
-getSummed3 <- function(dM){
-  dM$value = factor(dM$value,levels = c("queen","worker","nonDE"))
-  levels(dM$value)[3] = "non-biased"
-  dM$species = as.factor(dM$species)
-  dM$stage = factor(dM$variable,levels = c("larva","head","abdomen"))
-  summed <- lapply(stats,function(x) calcMean2(dM,x))
-  return(summed)
-}
-
-
-calcMean2 <- function(d,col){
-  Sum <- ldply(lapply(levels(d$stage),function(j){
-      ldply(lapply(levels(d$value),function(k){
-        bootMean(d[d$stage==j&d$value==k,col],1000,j,"ant",k)
-      }))
-    }))
-  colnames(Sum)[2:3] = c("c1","c2")
-  for (i in 1:3){
-    Sum[,i] = as.numeric(as.character(Sum[,i]))
-  }
-  Sum$stage = factor(Sum$stage,levels = c("larva","head","abdomen"))
-  return(Sum)
-}
-
-m3 = merge(mpM,mp1,by="Gene")
-
-sum3 = getSummed3(m3)
-pl = lapply(sum3,plotSummed)
-
-p1 <- pl[[2]]+ylab("BSnIRPE.est")+theme(legend.position = "none")
-p2 <- pl[[4]]+ylab("f")+theme(legend.position = c(0.2,0.2))
-p <- arrangeGrob(p1,p2,nrow=1)
-ggsave(p,filename = "figures/newStats_oldExpr.png",height=6,width=10)
-
-m3$value = factor(m3$value,levels = c("queen","worker","nonDE"))
-m3$variable = factor(m3$variable,levels = c("larva","head","abdomen"))
-
-p <- ggplot(m3,aes(x=variable,y=f,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  facet_grid(. ~ species)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  coord_cartesian(ylim=c(0,0.5))+
-  ylab("f")+
-  xlab("stage/tissue")+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = c(0.8,0.8))
-
-ggsave(p,file="figures/NewConstraint_oldExpr.png",height=8,width=8,dpi=300)
-
-p <- ggplot(m3,aes(x=variable,y=BSnIPRE.est,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  facet_grid(. ~ species)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  coord_cartesian(ylim=c(0,0.5))+
-  ylab("BSnIRPE.est")+
-  xlab("stage/tissue")+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = c(0.8,0.8))
-
-ggsave(p,file="figures/NewEst_oldExpr.png",height=8,width=8,dpi=300)
-
-oldConstraint <- read.csv("~/Data/Nurse_Larva/MKtestConstraintOneAlpha.csv")
-colnames(oldConstraint) = c("Gene","f")
-
-m3 = merge(mpM,oldConstraint,by="Gene")
-
-m3$value = factor(m3$value,levels = c("queen","worker","nonDE"))
-m3$variable = factor(m3$variable,levels = c("larva","head","abdomen"))
-
-p <- ggplot(m3,aes(x=variable,y=f,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("f")+
-  xlab("stage/tissue")+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = c(0.8,0.8))
-
-ggsave(p,"figures/oldExpr_constraint.png",height=8,width=8,dpi=300)
-
-
-
-m3 = merge(aDE,mp1,by="Gene")
-
-m3$value = factor(m3$value,levels = c("queen","worker","nonDE"))
-m3$variable = factor(m3$variable,levels = c("larva","head","abdomen"))
-
-p <- ggplot(m3,aes(x=variable,y=1-f,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  facet_grid(. ~ species)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("constraint")+
-  xlab("stage/tissue")+
-  coord_cartesian(ylim=c(0.25,1))+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = c(0.8,0.2))
-
-mpO <- read.csv("~/GitHub/devnetwork/data/MpharAnn.csv")
-
-m4 = merge(mpM,mpO,by="Gene")
-m4$value = factor(m4$value,levels = c("queen","worker","nonDE"))
-m4$variable = factor(m4$variable,levels = c("larva","head","abdomen"))
-
-p <- ggplot(m4,aes(x=variable,y=BSnIPRE.est,fill=value))+
-  geom_boxplot(outlier.shape = NA,notch=T)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("f")+
-  xlab("stage/tissue")+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = c(0.8,0.8))
-
-
-alphaA = read.csv("results/Amel.alpha.csv")
-alphaM = read.csv("results/Mphar.alpha.csv") 
-alpha = rbind(alphaA,alphaM)
-alpha$Caste=factor(alpha$Caste,levels = c("queen","worker","non-biased"))
-alpha$stage = factor(alpha$stage,levels=c("larva","pupa","head","thorax","abdomen"))
-alpha$species = as.character(alpha$species)
-alpha$species[alpha$species=="Amel"] = "honey bee"
-alpha$species[alpha$species == "Mphar"] = "ant"
-alpha$species = as.factor(alpha$species)
-
-p <- ggplot(alpha,aes(x=stage,y=alpha,fill=Caste))+
-  geom_bar(position = position_dodge(),stat="identity")+
-  geom_errorbar(aes(ymin=c1,ymax=c2),position = position_dodge(width=0.9),width=0.4)+
-  facet_grid(. ~ factor(species))+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("alpha")+
-  xlab("stage/tissue")+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = c(0.1,0.1))
-
-ggsave(p,file="figures/alpha_MKtest.png",height=8,width=10,dpi=300)
-
-##old alpha
-alpha <- read.table("~/GitHub/popgenAM/data/alpha.old.Mphar.abd.csv")
-a = alpha[,c(7833:7835)]
-colnames(a) = c("worker","NDE","queen")
-
-bootMean <- function(d){
-  boots = 1000
-  d = d[!is.na(d)]
-  m = mean(d)
-  mboot = sapply(1:boots,function(x){
-    mean(sample(d,length(d),replace=TRUE))
-  })
-  return(c(mean=m,c1=quantile(mboot,0.025),c2=quantile(mboot,0.975)
-           ))
-}
-b = apply(a,2,function(d) as.numeric(as.character(d)))
-
-##alpha
-aM = read.csv("~/GitHub/popgenAM/results/alpha.Mphar.csv")
-aB = read.csv("~/GitHub/popgenAM/results/alpha.Amel.csv")
-a = rbind(aM,aB)
-a$Caste = factor(a$Caste,levels = c("queen","worker","non-biased"))
-a$stage = factor(a$stage,levels= c("larva","pupa","head","thorax","abdomen"))
-
-p1 <- ggplot(a,aes(x=stage,y=alpha,fill=Caste))+
-  geom_bar(stat="identity",position = position_dodge())+
-  geom_errorbar(aes(ymin=c1,ymax=c2),position = position_dodge(width=0.9),width=0.4)+
-  facet_grid(. ~ species)
-
-ggsave(p,file="~/GitHub/popgenAM/figures/alpha_March19.png",height=8,width=10,dpi=300)
-
-##Calculating alpha
-calcAlpha <- function(d){
-  d = d[!is.na(d),]
-  num = d$FS*d$PR/(d$PS+d$FS)
-  denom = d$PS*d$FR/(d$PS+d$FS)
-  return(1-sum(num,na.rm=T)/sum(denom,na.rm=T))
-}
-
-bootAlpha <- function(d,boots,stage,species,variable){
-  m = calcAlpha(d)
-  print(m)
-  mboot = sapply(1:boots,function(x){
-    calcAlpha(d[sample(1:nrow(d),nrow(d),replace=TRUE),])
-  })
-  return(c(mean=m,c1=quantile(mboot,0.025),c2=quantile(mboot,0.975),
-           stage=stage,species=species,value=variable))
-}
-
-calcAlpha2 <- function(d){
-  Sum <- ldply(lapply(levels(d$species),function(i){
-    ldply(lapply(levels(d$stage),function(j){
-      ldply(lapply(levels(d$value),function(k){
-        bootAlpha(d[d$species==i&d$stage==j&d$value==k,],100,j,i,k)
-      }))
-    }))
-  }))
-  colnames(Sum)[2:3] = c("c1","c2")
-  for (i in 1:3){
-    Sum[,i] = as.numeric(as.character(Sum[,i]))
-  }
-  Sum$stage = factor(Sum$stage,levels = c("larva","pupa","head","thorax","abdomen"))
-  return(Sum)
-}
-
-getSummedAlpha <- function(dM){
-  dM = dM[!is.na(dM$PS) & !is.na(dM$PR) & !is.na(dM$FS) & !is.na(dM$FR),]
-  dM$value = factor(dM$value,levels = c("queen","worker","nonDE"))
-  levels(dM$value)[3] = "non-biased"
-  dM$species = as.factor(dM$species)
-  dM$stage = factor(dM$variable,levels = c("larva","pupa","head","thorax","abdomen"))
-  summed <- calcAlpha2(dM)
-  return(summed)
-}
-
-dM <- melt(d,id.vars = colnames(d)[-c(29:33)])
-
-dM$dos = dM$FR/(dM$FR+dM$FS) - dM$PR/(dM$PR+dM$PS)
-dM$alpha = 1 - (dM$FS*dM$PR)/(dM$FR*dM$PS)
-
-a = dM[dM$species=="honey bee",]
-1- (sum(a$FS*a$PR/(a$PS+a$FS)))/(sum(a$FR*a$PS/(a$PS+a$FS)))
-
-p <- ggplot(dM,aes(x=variable,y=alpha,fill=value))+
-  geom_boxplot(notch=T,outlier.shape = NA)+
-  coord_cartesian(ylim=c(-1,1))+
-  facet_grid(. ~ species)+
-  scale_fill_manual(values=SexPal)+
-  main_theme+
-  ylab("DoS")+
-  xlab("stage/tissue")+
-  theme(axis.text.x=element_text(angle=45,hjust=1),
-        legend.title = element_blank(),
-        legend.position = c(0.8,0.8))
-
-res <- getSummedAlpha(dM)
-
-res$value = factor(res$value,levels = c("queen","worker","non-biased"))
-p2 <- ggplot(res,aes(x=stage,y=mean,fill=value))+
-  geom_bar(stat="identity",position = position_dodge())+
-  geom_errorbar(aes(ymin=c1,ymax=c2),position = position_dodge(width=0.9),width=0.4)+
-  facet_grid(. ~ species)
-
-ggsave(arrangeGrob(p1,p2,nrow=2),file="figures/alpha.png",height=12,width=8,dpi=300)
+# mpOld <- mpO[,c(1,13,12,15,14,17,16)]
+# colnames(mpOld) = colnames(mp)[-c(6)]
+# 
+# 
+# bayes <- read.csv("~/Dropbox/monomorium nurses/data/bayesian_results.csv")
+# 
+# mpO2 = mpO[,c(1,8:10)]
+# mpM = melt(mpO2,id.vars = "Gene")
+# mpM$variable=as.character(mpM$variable)
+# mpM$value=as.character(mpM$value)
+# mpM$variable[mpM$variable=="Head"]="head"
+# mpM$variable[mpM$variable=="Gaster"]="abdomen"
+# mpM$variable[mpM$variable=="Larval"]="larva"
+# mpM$value[mpM$value=="Worker"]="worker"
+# mpM$value[mpM$value=="Reproductive"]="queen"
+# mpM$value[mpM$value=="NDE"]="nonDE"
+# 
+# m2 = merge(mpM,mp,by="Gene")
+# 
+# m2$value = factor(m2$value,levels = c("queen","worker","nonDE"))
+# m2$variable=factor(m2$variable,levels = c("larva","head","abdomen"))
+# p <- ggplot(m2,aes(x=variable,y=BSnIPRE.f,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("BSnIPRE.f (new)")+
+#   xlab("stage/tissue")+
+#   coord_cartesian(ylim=c(0,0.5))+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = "right",
+#         legend.justification = c(0,1))
+# 
+# ggsave(p,file="figures/oldExpr_newF.png",height=8,width=8,dpi=300)
+# 
+# p <- ggplot(m2,aes(x=variable,y=BSnIPRE.est,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("BSnIPRE.est (new)")+
+#   xlab("stage/tissue")+
+#   coord_cartesian(ylim=c(-0.5,1))+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = "right",
+#         legend.justification = c(0,1))
+# 
+# ggsave(p,file="figures/oldExpr_newEst.png",height=8,width=8,dpi=300)
+# 
+# oldSnipre <- read.csv("~/Dropbox/monomorium nurses/data/bayesian_results.csv")
+# 
+# m2 = merge(mpM,oldSnipre,by.x="Gene",by.y="gene")
+# m2$variable=factor(m2$variable,levels = c("larva","head","abdomen"))
+# 
+# m2$value = factor(m2$value,levels = c("queen","worker","nonDE"))
+# p <- ggplot(m2,aes(x=variable,y=BSnIPRE.f,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("BSnIPRE.f (old)")+
+#   xlab("stage/tissue")+
+#   coord_cartesian(ylim=c(0,0.5))+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = "right",
+#         legend.justification = c(0,1))
+# ggsave(p,file="figures/oldExpr_oldF.png",height=8,width=8,dpi=300)
+# 
+# p <- ggplot(m2,aes(x=variable,y=BSnIPRE.est,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("BSnIPRE.est (old)")+
+#   xlab("stage/tissue")+
+#   coord_cartesian(ylim=c(-0.5,1))+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = "right",
+#         legend.justification = c(0,1))
+# ggsave(p,file="figures/oldExpr_oldEst.png",height=8,width=8,dpi=300)
+# 
+# 
+# mpC = merge(aDE,mpM,by = c("Gene","variable"))
+# 
+# mpCfilt = mpC[mpC$value.x==mpC$value.y,]
+# mpCfilt = mpCfilt[,-c(4)]
+# colnames(mpCfilt)[3] = "value"
+# 
+# stats = c("BSnIPRE.gamma","BSnIPRE.est","BSnIPRE.f","f")
+# getSummed3 <- function(dM){
+#   dM$value = factor(dM$value,levels = c("queen","worker","nonDE"))
+#   levels(dM$value)[3] = "non-biased"
+#   dM$species = as.factor(dM$species)
+#   dM$stage = factor(dM$variable,levels = c("larva","head","abdomen"))
+#   summed <- lapply(stats,function(x) calcMean2(dM,x))
+#   return(summed)
+# }
+# 
+# 
+# calcMean2 <- function(d,col){
+#   Sum <- ldply(lapply(levels(d$stage),function(j){
+#       ldply(lapply(levels(d$value),function(k){
+#         bootMean(d[d$stage==j&d$value==k,col],1000,j,"ant",k)
+#       }))
+#     }))
+#   colnames(Sum)[2:3] = c("c1","c2")
+#   for (i in 1:3){
+#     Sum[,i] = as.numeric(as.character(Sum[,i]))
+#   }
+#   Sum$stage = factor(Sum$stage,levels = c("larva","head","abdomen"))
+#   return(Sum)
+# }
+# 
+# m3 = merge(mpM,mp1,by="Gene")
+# 
+# sum3 = getSummed3(m3)
+# pl = lapply(sum3,plotSummed)
+# 
+# p1 <- pl[[2]]+ylab("BSnIRPE.est")+theme(legend.position = "none")
+# p2 <- pl[[4]]+ylab("f")+theme(legend.position = c(0.2,0.2))
+# p <- arrangeGrob(p1,p2,nrow=1)
+# ggsave(p,filename = "figures/newStats_oldExpr.png",height=6,width=10)
+# 
+# m3$value = factor(m3$value,levels = c("queen","worker","nonDE"))
+# m3$variable = factor(m3$variable,levels = c("larva","head","abdomen"))
+# 
+# p <- ggplot(m3,aes(x=variable,y=f,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   facet_grid(. ~ species)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   coord_cartesian(ylim=c(0,0.5))+
+#   ylab("f")+
+#   xlab("stage/tissue")+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = c(0.8,0.8))
+# 
+# ggsave(p,file="figures/NewConstraint_oldExpr.png",height=8,width=8,dpi=300)
+# 
+# p <- ggplot(m3,aes(x=variable,y=BSnIPRE.est,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   facet_grid(. ~ species)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   coord_cartesian(ylim=c(0,0.5))+
+#   ylab("BSnIRPE.est")+
+#   xlab("stage/tissue")+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = c(0.8,0.8))
+# 
+# ggsave(p,file="figures/NewEst_oldExpr.png",height=8,width=8,dpi=300)
+# 
+# oldConstraint <- read.csv("~/Data/Nurse_Larva/MKtestConstraintOneAlpha.csv")
+# colnames(oldConstraint) = c("Gene","f")
+# 
+# m3 = merge(mpM,oldConstraint,by="Gene")
+# 
+# m3$value = factor(m3$value,levels = c("queen","worker","nonDE"))
+# m3$variable = factor(m3$variable,levels = c("larva","head","abdomen"))
+# 
+# p <- ggplot(m3,aes(x=variable,y=f,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("f")+
+#   xlab("stage/tissue")+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = c(0.8,0.8))
+# 
+# ggsave(p,"figures/oldExpr_constraint.png",height=8,width=8,dpi=300)
+# 
+# 
+# 
+# m3 = merge(aDE,mp1,by="Gene")
+# 
+# m3$value = factor(m3$value,levels = c("queen","worker","nonDE"))
+# m3$variable = factor(m3$variable,levels = c("larva","head","abdomen"))
+# 
+# p <- ggplot(m3,aes(x=variable,y=1-f,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   facet_grid(. ~ species)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("constraint")+
+#   xlab("stage/tissue")+
+#   coord_cartesian(ylim=c(0.25,1))+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = c(0.8,0.2))
+# 
+# mpO <- read.csv("~/GitHub/devnetwork/data/MpharAnn.csv")
+# 
+# m4 = merge(mpM,mpO,by="Gene")
+# m4$value = factor(m4$value,levels = c("queen","worker","nonDE"))
+# m4$variable = factor(m4$variable,levels = c("larva","head","abdomen"))
+# 
+# p <- ggplot(m4,aes(x=variable,y=BSnIPRE.est,fill=value))+
+#   geom_boxplot(outlier.shape = NA,notch=T)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("f")+
+#   xlab("stage/tissue")+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = c(0.8,0.8))
+# 
+# 
+# alphaA = read.csv("results/Amel.alpha.csv")
+# alphaM = read.csv("results/Mphar.alpha.csv") 
+# alpha = rbind(alphaA,alphaM)
+# alpha$Caste=factor(alpha$Caste,levels = c("queen","worker","non-biased"))
+# alpha$stage = factor(alpha$stage,levels=c("larva","pupa","head","thorax","abdomen"))
+# alpha$species = as.character(alpha$species)
+# alpha$species[alpha$species=="Amel"] = "honey bee"
+# alpha$species[alpha$species == "Mphar"] = "ant"
+# alpha$species = as.factor(alpha$species)
+# 
+# p <- ggplot(alpha,aes(x=stage,y=alpha,fill=Caste))+
+#   geom_bar(position = position_dodge(),stat="identity")+
+#   geom_errorbar(aes(ymin=c1,ymax=c2),position = position_dodge(width=0.9),width=0.4)+
+#   facet_grid(. ~ factor(species))+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("alpha")+
+#   xlab("stage/tissue")+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = c(0.1,0.1))
+# 
+# ggsave(p,file="figures/alpha_MKtest.png",height=8,width=10,dpi=300)
+# 
+# ##old alpha
+# alpha <- read.table("~/GitHub/popgenAM/data/alpha.old.Mphar.abd.csv")
+# a = alpha[,c(7833:7835)]
+# colnames(a) = c("worker","NDE","queen")
+# 
+# bootMean <- function(d){
+#   boots = 1000
+#   d = d[!is.na(d)]
+#   m = mean(d)
+#   mboot = sapply(1:boots,function(x){
+#     mean(sample(d,length(d),replace=TRUE))
+#   })
+#   return(c(mean=m,c1=quantile(mboot,0.025),c2=quantile(mboot,0.975)
+#            ))
+# }
+# b = apply(a,2,function(d) as.numeric(as.character(d)))
+# 
+# ##alpha
+# aM = read.csv("~/GitHub/popgenAM/results/alpha.Mphar.csv")
+# aB = read.csv("~/GitHub/popgenAM/results/alpha.Amel.csv")
+# a = rbind(aM,aB)
+# a$Caste = factor(a$Caste,levels = c("queen","worker","non-biased"))
+# a$stage = factor(a$stage,levels= c("larva","pupa","head","thorax","abdomen"))
+# 
+# p1 <- ggplot(a,aes(x=stage,y=alpha,fill=Caste))+
+#   geom_bar(stat="identity",position = position_dodge())+
+#   geom_errorbar(aes(ymin=c1,ymax=c2),position = position_dodge(width=0.9),width=0.4)+
+#   facet_grid(. ~ species)
+# 
+# ggsave(p,file="~/GitHub/popgenAM/figures/alpha_March19.png",height=8,width=10,dpi=300)
+# 
+# ##Calculating alpha
+# calcAlpha <- function(d){
+#   d = d[!is.na(d),]
+#   num = d$FS*d$PR/(d$PS+d$FS)
+#   denom = d$PS*d$FR/(d$PS+d$FS)
+#   return(1-sum(num,na.rm=T)/sum(denom,na.rm=T))
+# }
+# 
+# bootAlpha <- function(d,boots,stage,species,variable){
+#   m = calcAlpha(d)
+#   print(m)
+#   mboot = sapply(1:boots,function(x){
+#     calcAlpha(d[sample(1:nrow(d),nrow(d),replace=TRUE),])
+#   })
+#   return(c(mean=m,c1=quantile(mboot,0.025),c2=quantile(mboot,0.975),
+#            stage=stage,species=species,value=variable))
+# }
+# 
+# calcAlpha2 <- function(d){
+#   Sum <- ldply(lapply(levels(d$species),function(i){
+#     ldply(lapply(levels(d$stage),function(j){
+#       ldply(lapply(levels(d$value),function(k){
+#         bootAlpha(d[d$species==i&d$stage==j&d$value==k,],100,j,i,k)
+#       }))
+#     }))
+#   }))
+#   colnames(Sum)[2:3] = c("c1","c2")
+#   for (i in 1:3){
+#     Sum[,i] = as.numeric(as.character(Sum[,i]))
+#   }
+#   Sum$stage = factor(Sum$stage,levels = c("larva","pupa","head","thorax","abdomen"))
+#   return(Sum)
+# }
+# 
+# getSummedAlpha <- function(dM){
+#   dM = dM[!is.na(dM$PS) & !is.na(dM$PR) & !is.na(dM$FS) & !is.na(dM$FR),]
+#   dM$value = factor(dM$value,levels = c("queen","worker","nonDE"))
+#   levels(dM$value)[3] = "non-biased"
+#   dM$species = as.factor(dM$species)
+#   dM$stage = factor(dM$variable,levels = c("larva","pupa","head","thorax","abdomen"))
+#   summed <- calcAlpha2(dM)
+#   return(summed)
+# }
+# 
+# dM <- melt(d,id.vars = colnames(d)[-c(29:33)])
+# 
+# dM$dos = dM$FR/(dM$FR+dM$FS) - dM$PR/(dM$PR+dM$PS)
+# dM$alpha = 1 - (dM$FS*dM$PR)/(dM$FR*dM$PS)
+# 
+# a = dM[dM$species=="honey bee",]
+# 1- (sum(a$FS*a$PR/(a$PS+a$FS)))/(sum(a$FR*a$PS/(a$PS+a$FS)))
+# 
+# p <- ggplot(dM,aes(x=variable,y=alpha,fill=value))+
+#   geom_boxplot(notch=T,outlier.shape = NA)+
+#   coord_cartesian(ylim=c(-1,1))+
+#   facet_grid(. ~ species)+
+#   scale_fill_manual(values=SexPal)+
+#   main_theme+
+#   ylab("DoS")+
+#   xlab("stage/tissue")+
+#   theme(axis.text.x=element_text(angle=45,hjust=1),
+#         legend.title = element_blank(),
+#         legend.position = c(0.8,0.8))
+# 
+# res <- getSummedAlpha(dM)
+# 
+# res$value = factor(res$value,levels = c("queen","worker","non-biased"))
+# p2 <- ggplot(res,aes(x=stage,y=mean,fill=value))+
+#   geom_bar(stat="identity",position = position_dodge())+
+#   geom_errorbar(aes(ymin=c1,ymax=c2),position = position_dodge(width=0.9),width=0.4)+
+#   facet_grid(. ~ species)
+# 
+# ggsave(arrangeGrob(p1,p2,nrow=2),file="figures/alpha.png",height=12,width=8,dpi=300)
 
 ################
 ##Part 2: which tissues predict molecular evolution?
@@ -757,19 +765,19 @@ aE = merge(antRes[[1]] %>% set_colnames(c("Gene",colnames(antRes[[1]])[-c(1)] %>
 bE = merge(beeRes[[1]] %>% set_colnames(c("Gene",colnames(beeRes[[1]])[-c(1)] %>% paste(.,"_logFC",sep=""))),bE,by="Gene")
 
 
-aE = merge(aE,mp1,by="Gene")
-bE = merge(bE,ap1,by="Gene")
+aE = merge(aE,mp,by="Gene")
+bE = merge(bE,ap,by="Gene")
 aE = merge(aE,antLen,by="Gene")
 bE = merge(bE,beeLen,by="Gene")
-colnames(aE)[39] = "transcript_length"
-colnames(bE)[39] = "transcript_length"
+colnames(aE)[42] = "transcript_length"
+colnames(bE)[42] = "transcript_length"
 
-lm <- glm(log(BSnIPRE.f) ~ ., data = aE[,-c(1,12:33,35:38)])
+lm <- glm(log(BSnIPRE.f) ~ ., data = aE[,-c(1,12:31,33:41)])
 rel1 = calc.relimp(lm,rela=T,type="lmg")
 rel1$lmg*100
 drop1(lm, .~., test = "Chi") ##Conclusion: abdomen and thorax logFC have the largest effect
 
-lm <- glm(log(BSnIPRE.f) ~ ., data = bE[,-c(1,12:33,35:38)])
+lm <- glm(log(BSnIPRE.f) ~ ., data = bE[,-c(1,12:31,33:41)])
 rel2 = calc.relimp(lm,rela=T,type="lmg")
 rel2$lmg*100
 drop1(lm, .~., test = "Chi") ##Conclusion: abdomen and thorax logFC have the largest effect
@@ -778,7 +786,7 @@ importances_est = data.frame(ant=rel1$lmg,bee=rel2$lmg,variable=gsub("_", " ",na
 iM = melt(importances_est,id.vars="variable")
 colnames(iM) = c("variable","species","value")
 iM$value2 = round(iM$value*100,digits=2)
-iM$variable=factor(iM$variable,levels = gsub("_"," ",colnames(bE)[c(2:11,39)]))
+iM$variable=factor(iM$variable,levels = gsub("_"," ",colnames(bE)[c(2:11,42)]))
 iM$species = as.character(iM$species)
 iM$species[iM$species=="bee"] = "honey bee"
 
@@ -798,10 +806,72 @@ ggsave(p1,file="figures/perc_variance_casteSpecific.png",height=8,width=10,dpi=3
 cor.test(bE$queen_abdomen_expr,bE$BSnIPRE.f,method="spearman")
 cor.test(aE$queen_abdomen_expr,aE$BSnIPRE.f,method="spearman")
 
-ggplot(bE,aes(x=head_expr,y=BSnIPRE.f))+
-  geom_hex()+
+allExpr = rbind(aE,bE)
+
+p1 <- ggplot(allExpr,aes(x=abdomen_expr,y=BSnIPRE.f))+
+  geom_point(alpha=0.1)+
+  main_theme+
+  facet_grid(. ~ species)+
   ylim(0,1)+
   geom_smooth()
+
+p2 <- ggplot(allExpr,aes(x=abdomen_expr,y=FR/(FR+FS)))+
+  geom_point(alpha=0.1)+
+  main_theme+
+  facet_grid(. ~ species)+
+  ylim(0,1)+
+  geom_smooth()
+
+#Worker abdominal expression
+aEW = getExpr(antT,factorA[factorA$caste=="worker",])
+bEW = getExpr(beeT,factorB[factorB$caste=="worker",])
+aEW$Gene = rownames(aEW)
+bEW$Gene = rownames(bEW)
+aE2 = merge(aE,aEW,by="Gene")
+bE2 = merge(bE,bEW,by="Gene")
+aEq = getExpr(antT,factorA[factorA$caste=="queen",])
+bEq = getExpr(beeT,factorB[factorB$caste=="queen",])
+aEq$Gene = rownames(aEq)
+bEq$Gene = rownames(bEq)
+aE3 = merge(aE2,aEq,by="Gene")
+bE3 = merge(bE2,bEq,by="Gene")
+
+allExpr = rbind(aE3,bE3)[,c(12,13,32,36,43,48)] %>% 
+  set_colnames(.,c("FS","FR","f","species","worker","queen")) %>%
+  melt(.,id.vars=c("FS","FR","species","f"))
+
+beeExpr <- data.frame(Gene=rownames(beeT),Expr=rowMeans(log(beeT+1)))
+aD <- read.table("~/GitHub/devnetwork/results/amel_cerana_dnds.txt",head=T)
+
+bb = merge(beeExpr,aD,by="Gene")
+ggplot(bb,aes(x=Expr,y=dN_dS))+
+  geom_hex()+geom_smooth()+
+  coord_cartesian(ylim=c(0,2))
+  
+
+p1 <- ggplot(allExpr,aes(x=value^0.5,y=f,color=variable))+
+  geom_point(alpha=0.1)+
+  main_theme+
+  ylab("f")+
+  xlab("abdomen expression")+
+  facet_grid(. ~ species)+
+  ylim(0,1)+
+  geom_smooth()
+
+ggsave(p1,file="figures/abd_f.png",height=8,width=10,dpi=300)
+
+p2 <- ggplot(allExpr,aes(x=value,y=FR/(FR+FS)))+
+  geom_hex()+
+  main_theme+
+  ylab("f")+
+  xlab("abdomen expression")+
+  facet_grid(. ~ species)+
+  ylim(0,1)+
+  geom_smooth(method="lm")
+
+library(randomForest)
+
+rf <- randomForest(BSnIPRE.f ~ ., data = aE[,-c(1,12:31,33:41)],importance=T)
 
 ggplot(aE,aes(x=abdomen_expr,y=BSnIPRE.f))+
   geom_hex()+
@@ -884,5 +954,9 @@ p <- ggplot(aE[abs(aE$abdomen_logFC) >=1,],aes(x=-abdomen_logFC,y=1-f))+
   main_theme
 
 ggsave(p,file="figures/abdLogFC_ant.png",height=6,width=8,dpi=300)
+
+library(randomForest)
+rf <- randomForest(BSnIPRE.f ~ ., data = aE[,-c(1,12:31,33:41)],importance=T,
+                   ntree=2000)
 
 
